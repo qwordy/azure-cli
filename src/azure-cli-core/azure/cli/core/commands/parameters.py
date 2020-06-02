@@ -308,6 +308,12 @@ zone_type = CLIArgumentType(
     nargs=1
 )
 
+names_type = CLIArgumentType(
+    options_list=['--names'],
+    help='Space-delimited names of resources',
+    nargs='+'
+)
+
 vnet_name_type = CLIArgumentType(
     local_context_attribute=LocalContextAttribute(name='vnet_name', actions=[LocalContextAction.GET])
 )

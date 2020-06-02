@@ -39,7 +39,7 @@ class AzCli(CLI):
 
         from azure.cli.core.commands import register_cache_arguments
         from azure.cli.core.commands.arm import (
-            register_ids_argument, register_global_subscription_argument)
+            register_ids_argument, register_global_subscription_argument, register_names_arguments)
         from azure.cli.core.cloud import get_active_cloud
         from azure.cli.core.commands.transform import register_global_transforms
         from azure.cli.core._session import ACCOUNT, CONFIG, SESSION
@@ -64,6 +64,7 @@ class AzCli(CLI):
         register_global_subscription_argument(self)
         register_ids_argument(self)  # global subscription must be registered first!
         register_cache_arguments(self)
+        register_names_arguments(self)
 
         self.progress_controller = None
 
@@ -309,7 +310,8 @@ class MainCommandsLoader(CLICommandsLoader):
 
     def load_arguments(self, command=None):
         from azure.cli.core.commands.parameters import (
-            resource_group_name_type, get_location_type, deployment_name_type, vnet_name_type, subnet_name_type)
+            resource_group_name_type, get_location_type, deployment_name_type, vnet_name_type, subnet_name_type,
+            names_type)
         from knack.arguments import ignore_type
 
         # omit specific command to load everything
@@ -332,6 +334,7 @@ class MainCommandsLoader(CLICommandsLoader):
                     c.argument('subnet', subnet_name_type)
                     c.argument('deployment_name', deployment_name_type)
                     c.argument('cmd', ignore_type)
+                    # c.argument('names', names_type)
 
                 if command is None:
                     # load all arguments via reflection

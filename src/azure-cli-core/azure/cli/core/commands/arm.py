@@ -377,6 +377,29 @@ def register_global_subscription_argument(cli_ctx):
     cli_ctx.register_event(EVENT_INVOKER_PRE_LOAD_ARGUMENTS, add_subscription_parameter)
 
 
+def register_names_arguments(cli_ctx):
+
+    class NamesAction(argparse.Action):
+        def __call__(self, parser, namespace, value, option_string=None):
+            arguments = namespace._cmd.arguments
+            for k, v in arguments.items():
+                if '--name' in v.type.settings['options_list']:
+                    setattr(namespace, k, IterateValue(value))
+
+    def add_names_argument(_, **kwargs):  # pylint: disable=unused-argument
+        command_table = kwargs.get('commands_loader').command_table
+
+        if not command_table:
+            return
+
+        for command in command_table.values():
+            command.add_argument(
+                'names', '--names', arg_group='Global', help='Space-delimited names of resources',
+                nargs='+', action=NamesAction, dest='_names')
+
+    cli_ctx.register_event(EVENT_INVOKER_PRE_LOAD_ARGUMENTS, add_names_argument)
+
+
 add_usage = '--add property.listProperty <key=value, string or JSON string>'
 set_usage = '--set property1.property2=<value>'
 remove_usage = '--remove property.list <indexToRemove> OR --remove propertyToRemove'
