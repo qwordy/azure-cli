@@ -4538,7 +4538,7 @@ class SharedVMExtensionTest(ScenarioTest):
         az vm shared-extension show -g rg -n Microsoft.Azure.CLI.ext1
         az vm shared-extension delete -g rg -n Microsoft.Azure.CLI.ext1
 
-        az vm shared-extension version create -g rg -n Microsoft.Azure.CLI.ext1 --version 1.0.0 --media-link http://www.foo.com --regions westus --compute-role PaaS --supported-os Windows -l centraluseuap
+        az vm shared-extension version create -g rg -n Microsoft.Azure.CLI.ext1 --version 1.0.0 --media-link https://sharedvmextension.blob.core.windows.net/container1/image.zip --regions westus --compute-role PaaS --supported-os Windows -l centraluseuap
         az vm shared-extension version show -g rg -n Microsoft.Azure.CLI.ext1 --version 1.0.0
         az vm shared-extension version delete -g rg -n Microsoft.Azure.CLI.ext1 --version 1.0.0
         :return:
