@@ -500,6 +500,9 @@ def _build_role_scope(resource_group_name, scope, subscription_id):
         if resource_group_name:
             err = 'Resource group "{}" is redundant because scope is supplied'
             raise CLIError(err.format(resource_group_name))
+        from azure.mgmt.core.tools import is_valid_resource_id
+        if scope.startswith('/subscriptions/') and not is_valid_resource_id(scope):
+            raise CLIError('Invalid scope. Please use --help to view the valid format.')
     elif scope == '':
         raise CLIError('Invalid scope. Please use --help to view the valid format.')
     elif resource_group_name:
@@ -1319,6 +1322,8 @@ def create_service_principal_for_rbac(
         if '://' not in name:
             prefix = "http://"
             app_display_name = name
+            # replace space, /, \ with - to make it a valid URI
+            name = name.replace(' ', '-').replace('/', '-').replace('\\', '-')
             logger.warning('Changing "%s" to a valid URI of "%s%s", which is the required format'
                            ' used for service principal names', name, prefix, name)
             name = prefix + name  # normalize be a valid graph service principal name
@@ -1347,9 +1352,11 @@ def create_service_principal_for_rbac(
     app_start_date, app_end_date, cert_start_date, cert_end_date = \
         _validate_app_dates(app_start_date, app_end_date, cert_start_date, cert_end_date)
 
+    # replace space, /, \ with - to make it a valid URI
+    homepage = 'https://' + app_display_name.replace(' ', '-').replace('/', '-').replace('\\', '-')
     aad_application = create_application(cmd,
                                          display_name=app_display_name,
-                                         homepage='https://' + app_display_name,
+                                         homepage=homepage,
                                          identifier_uris=[name],
                                          available_to_other_tenants=False,
                                          password=password,
