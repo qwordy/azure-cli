@@ -1238,7 +1238,7 @@ def show_vm(cmd, resource_group_name, vm_name, show_details=False):
 
 def update_vm(cmd, resource_group_name, vm_name, os_disk=None, disk_caching=None,
               write_accelerator=None, license_type=None, no_wait=False, ultra_ssd_enabled=None,
-              priority=None, max_price=None, proximity_placement_group=None, workspace=None, **kwargs):
+              priority=None, max_price=None, proximity_placement_group=None, workspace=None, os_caching=None, **kwargs):
     from msrestazure.tools import parse_resource_id, resource_id, is_valid_resource_id
     from ._vm_utils import update_write_accelerator_settings, update_disk_caching
     vm = kwargs['parameters']

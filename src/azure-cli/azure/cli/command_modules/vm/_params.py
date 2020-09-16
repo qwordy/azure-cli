@@ -317,6 +317,11 @@ def load_arguments(self, _):
                    help="enable/disable disk write accelerator. Use singular value 'true/false' to apply across, or specify individual disks, e.g.'os=true 1=true 2=true' for os disk and data disks with lun of 1 & 2")
         c.argument('disk_caching', nargs='*', help="Use singular value to apply across, or specify individual disks, e.g. 'os=ReadWrite 0=None 1=ReadOnly' should enable update os disk and 2 data disks")
         c.argument('ultra_ssd_enabled', ultra_ssd_enabled_type)
+        # c.argument('os_caching', help='OS disk caching')
+        # c.argument('os_caching', path='storageProfile.osDisk.caching',
+        #            help='OS disk caching')
+        # c.extra('os_caching', path='storageProfile.osDisk.caching',
+        #          help='OS disk caching')
 
     with self.argument_context('vm create') as c:
         c.argument('name', name_arg_type, validator=_resource_not_exists(self.cli_ctx, 'Microsoft.Compute/virtualMachines'))
@@ -342,10 +347,6 @@ def load_arguments(self, _):
                    help='Indicate whether Automatic Updates is enabled for the Windows virtual machine')
         c.argument('patch_mode', arg_type=get_enum_type(self.get_models('InGuestPatchMode')), min_api='2020-06-01',
                    help='Mode of in-guest patching to IaaS virtual machine. Possible values are: Manual - You  control the application of patches to a virtual machine. You do this by applying patches manually inside the VM. In this mode, automatic updates are disabled; the paramater --enable-auto-update must be false. AutomaticByOS - The virtual machine will automatically be updated by the OS. The parameter --enable-auto-update must be true. AutomaticByPlatform - the virtual machine will automatically updated by the OS. The parameter --enable-agent and --enable-auto-update must be true')
-        c.argument('os_caching', path='storageProfile.osDisk.caching',
-                   help='OS disk caching')
-        c.extra('os_caching', path='storageProfile.osDisk.caching',
-                 help='OS disk caching')
 
     with self.argument_context('vm create', arg_group='Storage') as c:
         c.argument('attach_os_disk', help='Attach an existing OS disk to the VM. Can use the name or ID of a managed disk or the URI to an unmanaged disk VHD.')
