@@ -278,6 +278,18 @@ def cf_postgres_server_ad_administrators_operations(cli_ctx, _):
     return get_postgresql_management_client(cli_ctx).server_administrators
 
 
+def cf_mysql_location_based_performance_tier_operations(cli_ctx, _):
+    return get_mysql_management_client(cli_ctx).location_based_performance_tier
+
+
+def cf_postgres_location_based_performance_tier_operations(cli_ctx, _):
+    return get_postgresql_management_client(cli_ctx).location_based_performance_tier
+
+
+def cf_mariadb_location_based_performance_tier_operations(cli_ctx, _):
+    return get_mariadb_management_client(cli_ctx).location_based_performance_tier
+
+
 # Meru operations for flexible servers
 def cf_mysql_flexible_servers(cli_ctx, _):
     return get_mysql_flexible_management_client(cli_ctx).servers
@@ -324,5 +336,4 @@ def resource_client_factory(cli_ctx, **_):
 
 
 def network_client_factory(cli_ctx):
-    from azure.mgmt.network import NetworkManagementClient
-    return get_mgmt_service_client(cli_ctx, NetworkManagementClient, api_version="2018-08-01")
+    return get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)

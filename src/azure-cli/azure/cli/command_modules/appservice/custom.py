@@ -568,10 +568,13 @@ def upload_zip_to_storage(cmd, resource_group_name, name, src, slot=None):
             client.web_apps.sync_function_triggers_slot(resource_group_name, name, slot)
         else:
             client.web_apps.sync_function_triggers(resource_group_name, name)
-    except CloudError as ce:
+    except CloudError as ex:
         # This SDK function throws an error if Status Code is 200
-        if ce.status_code != 200:
-            raise ce
+        if ex.status_code != 200:
+            raise ex
+    except DefaultErrorResponseException as ex:
+        if ex.response.status_code != 200:
+            raise ex
 
 
 def _generic_settings_operation(cli_ctx, resource_group_name, name, operation_name,
@@ -1970,6 +1973,7 @@ def list_publish_profiles(cmd, resource_group_name, name, slot=None, xml=False):
                 new[key.lstrip('@')] = profile[key]
             converted.append(new)
         return converted
+    cmd.cli_ctx.invocation.data['output'] = 'tsv'
     return full_xml
 
 
@@ -3585,8 +3589,8 @@ def webapp_up(cmd, name, resource_group_name=None, plan=None, location=None, sku
         # Raise error if current OS of the app is different from the current one
         if current_os.lower() != os_name.lower():
             raise CLIError("The webapp '{}' is a {} app. The code detected at '{}' will default to "
-                           "'{}'. "
-                           "Please create a new app to continue this operation.".format(name, current_os, src_dir, os))
+                           "'{}'. Please create a new app"
+                           "to continue this operation.".format(name, current_os, src_dir, os_name))
         _is_linux = plan_info.reserved
         # for an existing app check if the runtime version needs to be updated
         # Get site config to check the runtime version
@@ -3657,11 +3661,6 @@ def webapp_up(cmd, name, resource_group_name=None, plan=None, location=None, sku
     # zip contents & deploy
     zip_file_path = zip_contents_from_dir(src_dir, language)
     enable_zip_deploy(cmd, rg_name, name, zip_file_path)
-    # Remove the file after deployment, handling exception if user removed the file manually
-    try:
-        os.remove(zip_file_path)
-    except OSError:
-        pass
 
     if launch_browser:
         logger.warning("Launching app using default browser")
@@ -3670,6 +3669,7 @@ def webapp_up(cmd, name, resource_group_name=None, plan=None, location=None, sku
         _url = _get_url(cmd, rg_name, name)
         logger.warning("You can launch the app at %s", _url)
         create_json.update({'URL': _url})
+
     if logs:
         _configure_default_logging(cmd, rg_name, name)
         return get_streaming_log(cmd, rg_name, name)
@@ -3756,7 +3756,7 @@ def create_tunnel(cmd, resource_group_name, name, port=None, slot=None, timeout=
     if timeout:
         time.sleep(int(timeout))
     else:
-        while t.isAlive():
+        while t.is_alive():
             time.sleep(5)
 
 
@@ -3778,7 +3778,7 @@ def create_tunnel_and_session(cmd, resource_group_name, name, port=None, slot=No
     if timeout:
         time.sleep(int(timeout))
     else:
-        while s.isAlive() and t.isAlive():
+        while s.is_alive() and t.is_alive():
             time.sleep(5)
 
 

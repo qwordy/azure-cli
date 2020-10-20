@@ -15,8 +15,7 @@ from azure.cli.core.commands.parameters import (
     resource_group_name_type,
     get_three_state_flag)
 from azure.cli.command_modules.rdbms.validators import configuration_value_validator, validate_subnet, \
-    retention_validator, tls_validator, public_access_validator, pg_storage_validator, mysql_storage_validator, tier_validator, \
-    pg_sku_name_validator, mysql_sku_name_validator, pg_version_validator, mysql_version_validator, maintenance_window_validator, ip_address_validator
+    tls_validator, public_access_validator, maintenance_window_validator, ip_address_validator, retention_validator
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
 from azure.cli.core.local_context import LocalContextAttribute, LocalContextAction
 
@@ -32,24 +31,20 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
     }
 
     def _complex_params(command_group):
-
-        server_name_setter_arg_type = CLIArgumentType(metavar='NAME',
-                                                      help="Name of the server. The name can contain only lowercase letters, numbers, and the hyphen (-) character. Minimum 3 characters and maximum 63 characters.",
-                                                      local_context_attribute=LocalContextAttribute(name='server_name', actions=[LocalContextAction.SET], scopes=['{} server'.format(command_group)]))
-
-        server_name_getter_arg_type = CLIArgumentType(metavar='NAME',
-                                                      help="Name of the server. The name can contain only lowercase letters, numbers, and the hyphen (-) character. Minimum 3 characters and maximum 63 characters.",
-                                                      local_context_attribute=LocalContextAttribute(name='server_name', actions=[LocalContextAction.GET], scopes=['{} server'.format(command_group)]))
-
-        server_name_arg_type = CLIArgumentType(metavar='NAME',
-                                               help="Name of the server. The name can contain only lowercase letters, numbers, and the hyphen (-) character. Minimum 3 characters and maximum 63 characters.",
-                                               local_context_attribute=LocalContextAttribute(name='server_name', actions=[LocalContextAction.SET, LocalContextAction.GET], scopes=['{} server'.format(command_group)]))
-
+        server_name_help = "Name of the server. The name can contain only lowercase letters, numbers, and the hyphen (-) character. " + \
+                           "Minimum 3 characters and maximum 63 characters."
+        server_name_scope = ['{}'.format(command_group)]
+        server_name_setter_arg_type = CLIArgumentType(metavar='NAME', help=server_name_help, id_part='name',
+                                                      local_context_attribute=LocalContextAttribute(name='server_name', actions=[LocalContextAction.SET], scopes=server_name_scope))
+        server_name_getter_arg_type = CLIArgumentType(metavar='NAME', help=server_name_help, id_part='name',
+                                                      local_context_attribute=LocalContextAttribute(name='server_name', actions=[LocalContextAction.GET], scopes=server_name_scope))
+        server_name_arg_type = CLIArgumentType(metavar='NAME', help=server_name_help, id_part='name',
+                                               local_context_attribute=LocalContextAttribute(name='server_name', actions=[LocalContextAction.SET, LocalContextAction.GET], scopes=server_name_scope))
         overriding_none_arg_type = CLIArgumentType(local_context_attribute=LocalContextAttribute(name='context_name', actions=[LocalContextAction.GET]))
 
         with self.argument_context(command_group) as c:
             c.argument('name', options_list=['--sku-name'], required=True)
-            c.argument('server_name', arg_type=server_name_arg_type, completer=server_completers[command_group], options_list=['--server-name', '-s'], help='Name of the server. The name can contain only lowercase letters, numbers, and the hyphen (-) character. Minimum 3 characters and maximum 63 characters.')
+            c.argument('server_name', arg_type=server_name_arg_type, completer=server_completers[command_group], options_list=['--server-name', '-s'])
 
         with self.argument_context('{} server'.format(command_group)) as c:
             c.ignore('family', 'capacity', 'tier')
@@ -130,9 +125,14 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
             c.argument('file_last_written', type=int, help='Integer in hours to indicate file last modify time, default value is 72.')
             c.argument('filename_contains', help='The pattern that file name should match.')
 
+        with self.argument_context('{} server-logs list'.format(command_group)) as c:
+            c.argument('server_name', id_part=None, help='Name of the Server.')
+
         with self.argument_context('{} db'.format(command_group)) as c:
-            c.argument('server_name', options_list=['--server-name', '-s'], arg_type=server_name_arg_type)
             c.argument('database_name', options_list=['--name', '-n'])
+
+        with self.argument_context('{} db list'.format(command_group)) as c:
+            c.argument('server_name', id_part=None, help='Name of the Server.')
 
         with self.argument_context('{} server firewall-rule'.format(command_group)) as c:
             c.argument('server_name', options_list=['--server-name', '-s'])
@@ -176,6 +176,9 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
 
         with self.argument_context('{} server private-link-resource'.format(command_group)) as c:
             c.argument('server_name', options_list=['--server-name', '-s'], required=True, help='Name of the Server.')
+
+        with self.argument_context('{} server list-skus'.format(command_group)) as c:
+            c.argument('location_name', options_list=['--location', '-l'])
 
         if command_group != 'mariadb':
             with self.argument_context('{} server key'.format(command_group)) as c:
@@ -229,24 +232,29 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
         with self.argument_context('{} flexible-server create'.format(command_group)) as c:
             # Add create mode as a parameter
             if command_group == 'postgres':
-                c.argument('tier', default='GeneralPurpose', options_list=['--tier'], validator=tier_validator,
+                c.argument('tier', default='GeneralPurpose', options_list=['--tier'],
                            help='Compute tier of the server. Accepted values: Burstable, GeneralPurpose, Memory Optimized ')
-                c.argument('sku_name', default='Standard_D2s_v3', options_list=['--sku-name'], validator=pg_sku_name_validator,
+                c.argument('sku_name', default='Standard_D2s_v3', options_list=['--sku-name'],
                            help='The name of the compute SKU. Follows the convention Standard_{VM name}. Examples: Standard_D4s_v3 ')
-                c.argument('storage_mb', default='128', options_list=['--storage-size'], type=int, validator=pg_storage_validator,
+                c.argument('storage_mb', default='128', options_list=['--storage-size'], type=int,
                            help='The storage capacity of the server. Minimum is 32 GiB and max is 16 TiB.')
-                c.argument('version', default='12', options_list=['--version'], validator=pg_version_validator,
+                c.argument('backup_retention', default=7, type=int, options_list=['--backup-retention'],
+                           help='The number of days a backup is retained. Range of 7 to 35 days. Default is 7 days.',
+                           validator=retention_validator)
+                c.argument('version', default='12', options_list=['--version'],
                            help='Server major version.')
                 c.argument('zone', options_list=['--zone, -z'],
                            help='Availability zone into which to provision the resource.')
             elif command_group == 'mysql':
-                c.argument('tier', default='Burstable', validator=tier_validator,
+                c.argument('tier', default='Burstable',
                            help='Compute tier of the server. Accepted values: Burstable, GeneralPurpose, Memory Optimized ')
-                c.argument('sku_name', default='Standard_B1ms', options_list=['--sku-name'], validator=mysql_sku_name_validator,
-                           help='The name of the compute SKU. Follows the convention Standard_{VM name}. Examples: Standard_B1ms, Standard_D4s_v3 ')
-                c.argument('storage_mb', default='10', options_list=['--storage-size'], type=int, validator=mysql_storage_validator,
+                c.argument('sku_name', default='Standard_B1ms', options_list=['--sku-name'],
+                           help='The name of the compute SKU. Follows the convention Standard_{VM name}. Examples: Standard_B1ms, Standard_E16ds_v4 ')
+                c.argument('storage_mb', default='10', options_list=['--storage-size'], type=int,
                            help='The storage capacity of the server. Minimum is 5 GiB and increases in 1 GiB increments. Max is 16 TiB.')
-                c.argument('version', default='5.7', options_list=['--version'], validator=mysql_version_validator,
+                c.argument('backup_retention', default=7, type=int, options_list=['--backup-retention'],
+                           help='The number of days a backup is retained. Range of 7 to 35 days. Default is 7 days.')
+                c.argument('version', default='5.7', options_list=['--version'],
                            help='Server major version.')
                 c.argument('zone', options_list=['--zone, -z'],
                            help='Availability zone into which to provision the resource.')
@@ -263,9 +271,6 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
             c.argument('administrator_login_password', options_list=['--admin-password', '-p'],
                        help='The password of the administrator. Minimum 8 characters and maximum 128 characters. Password must contain characters from three of the following categories: English uppercase letters, English lowercase letters, numbers, and non-alphanumeric characters.',
                        arg_group='Authentication')
-            c.argument('backup_retention', default=7, type=int, options_list=['--backup-retention'],
-                       help='The number of days a backup is retained. Range of 7 to 35 days. Default is 7 days.',
-                       validator=retention_validator)
             c.argument('tags', tags_type)
             c.argument('public_access', options_list=['--public-access'],
                        help='Determines the public access. Enter single or range of IP addresses to be included in the allowed list of IPs. IP address ranges must be dash-separated and not contain any spaces. Specifying 0.0.0.0 allows public access from any resources deployed within Azure to access your server. Specifying no IP address sets the server in public access mode but does not create a firewall rule. ',
@@ -290,10 +295,6 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
 
         with self.argument_context('{} flexible-server update'.format(command_group)) as c:
             c.ignore('assign_identity')
-            c.argument('tier', options_list=['--tier'], validator=tier_validator,
-                       help='Compute tier of the server. Accepted values: Burstable, GeneralPurpose, Memory Optimized ')
-            c.argument('backup_retention', type=int, options_list=['--backup-retention'],
-                       help='The number of days a backup is retained. Range of 7 to 35 days. Default is 7 days.', validator=retention_validator)
             c.argument('administrator_login_password', options_list=['--admin-password', '-p'],
                        help='The password of the administrator. Minimum 8 characters and maximum 128 characters. Password must contain characters from three of the following categories: English uppercase letters, English lowercase letters, numbers, and non-alphanumeric characters.',)
             c.argument('ha_enabled', options_list=['--high-availability'], arg_type=get_enum_type(['Enabled', 'Disabled']),
@@ -302,11 +303,14 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
                        help='Period of time (UTC) designated for maintenance. Examples: "Sun:23:30" to schedule on Sunday, 11:30pm UTC. To set back to default pass in "Disabled".')
             c.argument('tags', tags_type)
             if command_group == 'mysql':
-                c.argument('sku_name', options_list=['--sku-name'], validator=mysql_sku_name_validator,
-                           help='The name of the compute SKU. Follows the convention Standard_{VM name}. Examples: Standard_B1ms, Standard_D4s_v3 ')
+                c.argument('tier', options_list=['--tier'],
+                           help='Compute tier of the server. Accepted values: Burstable, GeneralPurpose, Memory Optimized')
+                c.argument('sku_name', options_list=['--sku-name'],
+                           help='The name of the compute SKU. Follows the convention Standard_{VM name}. Examples: Standard_B1ms, Standard_E16ds_v4 ')
                 c.argument('storage_mb', options_list=['--storage-size'], type=int,
-                           validator=mysql_storage_validator,
                            help='The storage capacity of the server. Minimum is 5 GiB and increases in 1 GiB increments. Max is 16 TiB.')
+                c.argument('backup_retention', type=int, options_list=['--backup-retention'],
+                           help='The number of days a backup is retained. Range of 7 to 35 days. Default is 7 days.')
                 c.argument('auto_grow', arg_type=get_enum_type(['Enabled', 'Disabled']), options_list=['--storage-auto-grow'],
                            help='Enable or disable autogrow of the storage. Default value is Enabled.')
                 c.argument('ssl_enforcement', arg_type=get_enum_type(['Enabled', 'Disabled']),
@@ -317,11 +321,14 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
                 c.argument('replication_role', options_list=['--replication-role'],
                            help='The replication role of the server.')
             elif command_group == 'postgres':
-                c.argument('sku_name', options_list=['--sku-name'], validator=pg_sku_name_validator,
+                c.argument('tier', options_list=['--tier'],
+                           help='Compute tier of the server. Accepted values: Burstable, GeneralPurpose, Memory Optimized')
+                c.argument('sku_name', options_list=['--sku-name'],
                            help='The name of the compute SKU. Follows the convention Standard_{VM name}. Examples: Standard_D4s_v3 ')
                 c.argument('storage_mb', options_list=['--storage-size'], type=int,
-                           validator=pg_storage_validator,
                            help='The storage capacity of the server. Minimum is 32 GiB and max is 16 TiB.')
+                c.argument('backup_retention', type=int, options_list=['--backup-retention'],
+                           help='The number of days a backup is retained. Range of 7 to 35 days. Default is 7 days.', validator=retention_validator)
 
         with self.argument_context('{} flexible-server list-skus'.format(command_group)) as c:
             c.argument('location', arg_type=get_location_type(self.cli_ctx))
@@ -410,13 +417,9 @@ def load_arguments(self, _):    # pylint: disable=too-many-statements
         with self.argument_context('{} flexible-server replica create'.format(command_group)) as c:
             c.argument('source_server', options_list=['--source-server'],
                        help='The name or resource ID of the source server to restore from.')
-            c.argument('tier', options_list=['--tier'], validator=tier_validator,
-                       help='Compute tier of the server. Accepted values: Burstable, GeneralPurpose, Memory Optimized ')
-            if command_group == 'mysql':
-                c.argument('sku_name', options_list=['--sku-name'],
-                           validator=mysql_sku_name_validator,
-                           help='The name of the compute SKU. Follows the convention'
-                                ' Standard_{VM name}. Examples: Standard_B1ms, Standard_D4s_v3 ')
+            c.ignore('location')
+            c.ignore('sku_name')
+            c.ignore('tier')
 
         with self.argument_context('{} flexible-server replica stop-replication'.format(command_group)) as c:
             c.argument('server_name', options_list=['--name', '-s'], help='Name of the server.')

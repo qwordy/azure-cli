@@ -37,7 +37,7 @@ ACCESS_RESTRICTION_ACTION_TYPES = ['Allow', 'Deny']
 ASE_LOADBALANCER_MODES = ['Internal', 'External']
 
 
-# pylint: disable=too-many-statements
+# pylint: disable=too-many-statements, too-many-lines
 
 
 def load_arguments(self, _):
@@ -105,8 +105,7 @@ def load_arguments(self, _):
                    local_context_attribute=LocalContextAttribute(name='ase_name', actions=[LocalContextAction.GET]))
         c.argument('sku', arg_type=sku_arg_type)
         c.argument('is_linux', action='store_true', required=False, help='host web app on Linux worker')
-        c.argument('hyper_v', action='store_true', required=False, help='Host web app on Windows container',
-                   is_preview=True)
+        c.argument('hyper_v', action='store_true', required=False, help='Host web app on Windows container')
         c.argument('per_site_scaling', action='store_true', required=False, help='Enable per-app scaling at the '
                                                                                  'App Service plan level to allow for '
                                                                                  'scaling an app independently from '
@@ -320,7 +319,7 @@ def load_arguments(self, _):
             c.argument('python_version', help='The version used to run your web app if using Python, e.g., 2.7, 3.4')
             c.argument('net_framework_version', help="The version used to run your web app if using .NET Framework, e.g., 'v4.0' for .NET 4.6 and 'v3.0' for .NET 3.5")
             c.argument('linux_fx_version', help="The runtime stack used for your linux-based webapp, e.g., \"RUBY|2.5.5\", \"NODE|10.14\", \"PHP|7.2\", \"DOTNETCORE|2.1\". See https://aka.ms/linux-stacks for more info.")
-            c.argument('windows_fx_version', help="A docker image name used for your windows container web app, e.g., microsoft/nanoserver:ltsc2016", is_preview=True)
+            c.argument('windows_fx_version', help="A docker image name used for your windows container web app, e.g., microsoft/nanoserver:ltsc2016")
             if scope == 'functionapp':
                 c.ignore('windows_fx_version')
             c.argument('pre_warmed_instance_count', options_list=['--prewarmed-instance-count'],
@@ -890,6 +889,24 @@ def load_arguments(self, _):
     with self.argument_context('appservice ase list-plans') as c:
         c.argument('name', options_list=['--name', '-n'], help='Name of the app service environment',
                    local_context_attribute=LocalContextAttribute(name='ase_name', actions=[LocalContextAction.GET]))
+
+    # App Service Domain Commands
+    with self.argument_context('appservice domain create') as c:
+        c.argument('hostname', options_list=['--hostname', '-n'], help='Name of the custom domain')
+        c.argument('contact_info', options_list=['--contact-info', '-c'], help='The file path to a JSON object with your contact info for domain registration. '
+                                                                               'Please see the following link for the format of the JSON file expected: '
+                                                                               'https://github.com/AzureAppServiceCLI/appservice_domains_templates/blob/master/contact_info.json')
+        c.argument('privacy', options_list=['--privacy', '-p'], help='Enable privacy protection')
+        c.argument('auto_renew', options_list=['--auto-renew', '-a'], help='Enable auto-renew on the domain')
+        c.argument('accept_terms', options_list=['--accept-terms'], help='By using this flag, you are accepting '
+                                                                         'the conditions shown using the --show-hostname-purchase-terms flag. ')
+        c.argument('tags', arg_type=tags_type)
+        c.argument('dryrun', help='Show summary of the purchase and create operation instead of executing it')
+        c.argument('no_wait', help='Do not wait for the create to complete, and return immediately after queuing the create.')
+        c.argument('validate', help='Generate and validate the ARM template without creating any resources')
+
+    with self.argument_context('appservice domain show-terms') as c:
+        c.argument('hostname', options_list=['--hostname', '-n'], help='Name of the custom domain')
 
     with self.argument_context('staticwebapp') as c:
         c.argument('name', options_list=['--name', '-n'], metavar='NAME', help="Name of the static site")
